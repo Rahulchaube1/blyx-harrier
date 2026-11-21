@@ -1,0 +1,39 @@
+use claimclock;
+use assurancelevel;
+
+fn harrier_finite(values: vector) -> bool {
+    let mut i = 0;
+    while i < len(values) {
+        let value = at(values, i);
+        if !(value - value == 0.0) {
+            return false;
+        }
+        i += 1;
+    }
+    true
+}
+
+fn harrier_compute(now: f64, begins: f64, expires: f64, skew: f64, observed: f64, required: f64, auth_time: f64, max_age: f64) -> vector {
+    let claim = claimclock_check(now, begins, expires, skew);
+    let level = assurancelevel_policy(observed, required, auth_time, now, max_age);
+    if len(claim) == 0 || len(level) == 0 {
+        return [];
+    }
+    [at(claim, 0) * at(level, 0), at(claim, 0), at(level, 0), at(level, 1)]
+}
+
+// Apply time and assurance policy to a session after upstream identity verification.
+// Returns [policy accepted, claims time accepted, assurance/freshness accepted, session age]. Use only after the host has authenticated and verified the issuer, audience and signature.
+pub fn harrier_session(now: f64, begins: f64, expires: f64, skew: f64, observed: f64, required: f64, auth_time: f64, max_age: f64) -> vector {
+    if !(now >= -9007199254740991.0 && now <= 9007199254740991.0 && now % 1.0 == 0.0) { return []; }
+    if !(begins >= -9007199254740991.0 && begins <= 9007199254740991.0 && begins % 1.0 == 0.0) { return []; }
+    if !(expires >= -9007199254740991.0 && expires <= 9007199254740991.0 && expires % 1.0 == 0.0) { return []; }
+    if !(skew >= 0.0 && skew <= 9007199254740991.0 && skew % 1.0 == 0.0) { return []; }
+    if !(observed >= 0.0 && observed <= 9007199254740991.0 && observed % 1.0 == 0.0) { return []; }
+    if !(required >= 0.0 && required <= 9007199254740991.0 && required % 1.0 == 0.0) { return []; }
+    if !(auth_time >= -9007199254740991.0 && auth_time <= 9007199254740991.0 && auth_time % 1.0 == 0.0) { return []; }
+    if !(max_age >= 0.0 && max_age <= 9007199254740991.0 && max_age % 1.0 == 0.0) { return []; }
+    let result = harrier_compute(now, begins, expires, skew, observed, required, auth_time, max_age);
+    if !harrier_finite(result) { return []; }
+    result
+}
